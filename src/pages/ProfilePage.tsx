@@ -1,3 +1,4 @@
+import { useRef, useEffect } from 'react';
 import XPBar from '@/components/gamification/XPBar';
 import StreakCounter from '@/components/gamification/StreakCounter';
 import type { UserProfile, Verse, InputMode } from '@/types';
@@ -101,7 +102,7 @@ export default function ProfilePage({
           ))}
         </div>
 
-        {/* Cloze rate slider — shown only when Fill in Blank is selected */}
+        {/* Cloze rate input — shown only when Fill in Blank is selected */}
         {inputMode === 'fillBlank' && (
           <ClozeRateSlider value={clozeRate} onChange={onSetClozeRate} />
         )}
@@ -147,21 +148,51 @@ export default function ProfilePage({
   );
 }
 
-// ─── Cloze Rate Input ─────────────────────────────────────────
+// ─── Cloze Rate Slider ────────────────────────────────────────
 
+/**
+ * Difficulty gradient (mapped to Japandi palette, 30–70% range):
+ *  30–40%  olive-200 → olive-500       (easy, pastel green → green)
+ *  40–50%  olive-500 → amber-400       (moderate, green → warm yellow)
+ *  50–60%  amber-400 → warmBrown-600   (hard, yellow → clay red)
+ *  60–70%  warmBrown-600 → warmBrown-900 (very hard, red → near black)
+ */
 const MIN_RATE = 30;
 const MAX_RATE = 70;
+const RANGE = MAX_RATE - MIN_RATE; // 40
+const pct = (v: number) => `${((v - MIN_RATE) / RANGE) * 100}%`;
+const GRADIENT_STYLE = `linear-gradient(to right,
+  #D2D7C5 ${pct(30)},
+  #7A846A ${pct(40)},
+  #C2A878 ${pct(50)},
+  #9C6B4F ${pct(60)},
+  #1F1C19 ${pct(70)}
+)`;
 
 function ClozeRateSlider({ value, onChange }: { value: number; onChange: (v: number) => void }) {
-  // Difficulty label based on value
+  const trackRef = useRef<HTMLDivElement>(null);
+
   const label =
     value <= 40 ? 'Easy' :
     value <= 50 ? 'Moderate' :
     value <= 60 ? 'Hard' :
     'Very Hard';
 
+  const thumbColor =
+    value <= 40 ? '#7A846A' :
+    value <= 50 ? '#C2A878' :
+    value <= 60 ? '#9C6B4F' :
+    '#5E3E31';
+
+  const rangeRef = useRef<HTMLInputElement>(null);
+  useEffect(() => {
+    if (rangeRef.current) {
+      rangeRef.current.style.setProperty('--thumb-color', thumbColor);
+    }
+  }, [thumbColor]);
+
   return (
-    <div className="space-y-2 pt-1">
+    <div className="pt-2">
       <div className="flex items-center justify-between">
         <label className="text-sm font-medium text-warmBrown-700 dark:text-parchment-200">
           Blank Rate
@@ -171,7 +202,37 @@ function ClozeRateSlider({ value, onChange }: { value: number; onChange: (v: num
         </span>
       </div>
 
-      <div className="flex items-center gap-2">
+      {/* Gradient track + range input */}
+      <div className="relative mt-2">
+        <div
+          ref={trackRef}
+          className="h-2 rounded-full"
+          style={{ background: GRADIENT_STYLE }}
+        />
+        <input
+          ref={rangeRef}
+          type="range"
+          min={MIN_RATE}
+          max={MAX_RATE}
+          step={1}
+          value={value}
+          onChange={(e) => onChange(Number(e.target.value))}
+          className="absolute inset-0 w-full h-2 opacity-0 cursor-pointer"
+          style={{ margin: 0 }}
+        />
+        {/* Custom thumb indicator */}
+        <div
+          className="absolute top-1/2 -translate-y-1/2 w-5 h-5 rounded-full border-2 border-white dark:border-warmBrown-900 shadow-md pointer-events-none"
+          style={{
+            left: `calc(${((value - MIN_RATE) / RANGE) * 100}% - 10px)`,
+            backgroundColor: thumbColor,
+            transition: 'left 0.1s ease, background-color 0.2s ease',
+          }}
+        />
+      </div>
+
+      {/* Number input */}
+      <div className="flex items-center gap-2 mt-2">
         <input
           type="number"
           inputMode="numeric"

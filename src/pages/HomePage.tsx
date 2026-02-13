@@ -129,7 +129,7 @@ export default function HomePage({
             return (
               <motion.div
                 key="review-prompt"
-                className="fixed inset-0 z-50 flex items-end justify-center"
+                className="fixed inset-0 z-50 flex items-center justify-center px-4"
                 initial={{ opacity: 0 }}
                 animate={{ opacity: 1 }}
                 exit={{ opacity: 0 }}
@@ -140,16 +140,15 @@ export default function HomePage({
                   className="absolute inset-0 bg-black/40 dark:bg-black/60"
                   onClick={() => setReviewPromptVerseId(null)}
                 />
-                {/* Sheet */}
+                {/* Popup */}
                 <motion.div
-                  className="relative w-full max-w-md mx-auto bg-white dark:bg-warmBrown-800 rounded-t-2xl p-5 pb-8 space-y-4 shadow-xl"
-                  initial={{ y: '100%' }}
-                  animate={{ y: 0 }}
-                  exit={{ y: '100%' }}
-                  transition={{ type: 'spring', damping: 28, stiffness: 350 }}
+                  className="relative w-full max-w-sm mx-auto bg-white dark:bg-warmBrown-800 rounded-2xl p-5 space-y-4 shadow-xl"
+                  initial={{ opacity: 0, scale: 0.9 }}
+                  animate={{ opacity: 1, scale: 1 }}
+                  exit={{ opacity: 0, scale: 0.9 }}
+                  transition={{ type: 'spring', damping: 25, stiffness: 350 }}
                 >
                   <div className="text-center">
-                    <div className="w-10 h-1 bg-parchment-300 dark:bg-warmBrown-600 rounded-full mx-auto mb-3" />
                     <p className="font-serif font-semibold text-warmBrown-800 dark:text-parchment-100">
                       {promptVerse?.reference ?? 'Review'}
                     </p>
