@@ -51,14 +51,22 @@ The entire app MVP is functional and building cleanly. All 6 original phases are
 
 **Latest Session Changes:**
 - **Continuous "In Order" review mode**: Sequential review mode no longer shows the grading screen between verses. After typing completes, it auto-grades as `Rating.Good` and immediately advances to the next verse — a flow-through experience. The mode selector label changed from "Sequential" to "Continuous".
-- **Collection detail tap-to-review prompt**: Tapping a verse in the collection detail view (Library > Collections > [name]) now shows a bottom-sheet prompt with two options: **"This Verse"** (single-verse review) or **"In Order"** (continuous sequential review from that verse through the end of the collection). The last verse in the collection skips the prompt and goes straight to single-verse review.
+- **Collection detail tap-to-review prompt**: Tapping a verse in the collection detail view (Library > Collections > [name]) now shows a centered modal popup with two options: **"This Verse"** (single-verse review) or **"In Order"** (continuous sequential review from that verse through the end of the collection). The last verse in the collection skips the prompt and goes straight to single-verse review. (Originally a bottom sheet, changed to a centered popup with scale-in animation for better visibility.)
 - **In Order launch from collection**: `ReviewPage` reads new URL params `collectionId`, `startVerseId`, and `mode=sequential`. When present, it builds a review queue from the collection's verses (sorted by `compareReferences`), starting from the clicked verse, and auto-starts in continuous sequential mode.
 - **GitHub Pages deployment**: `vite.config.ts` reads `BASE_PATH` env var for Vite's `base` config (defaults to `/` for dev). `BrowserRouter` receives `basename={import.meta.env.BASE_URL}`. GitHub Actions workflow at `.github/workflows/deploy.yml` builds and deploys on push to `main`, injecting secrets as env vars. Copies `index.html` to `404.html` for SPA routing. See `DEPLOYMENT.md` for full manual setup guide.
 - **Mobile safe area support**: `viewport-fit=cover` added to the viewport meta tag. `BottomNav` has `padding-bottom: env(safe-area-inset-bottom)` so it clears the home indicator on phones with gesture nav.
+- **Pinch-to-zoom disabled**: Viewport meta tag includes `maximum-scale=1.0, user-scalable=no`. CSS `touch-action: pan-x pan-y` on `html` element blocks pinch-zoom on iOS Safari.
 - **Scroll-to-top on navigation**: `AppShell.tsx` uses a `useEffect` on `location.pathname` to call `scrollTo(0, 0)` on the `<main>` scroll container when the route changes. Fixes scroll position persisting across pages.
 - **Fill in Blank (Cloze) mode revamped**: New `FillBlankInput.tsx` component replaces the old textarea approach. Uses a stop-word list (`STOP_WORDS` set) to identify key words (nouns, verbs, adjectives). Randomly blanks a configurable percentage of key words. Blanked words display as underscores (preserving punctuation). User types the full word in a text input for each blank. Same "Need help?" reveal-after-3-wrong-guesses pattern as `FirstLetterInput`. Stop words are never blanked.
-- **Cloze rate setting**: `useInputMode` hook now also manages `clozeRate` (30–70%, default 30%, persisted in localStorage). When "Fill in Blank (Cloze)" is selected on the Profile page, a `ClozeRateSlider` appears with a difficulty gradient (olive→amber→warmBrown→near-black) and a number input. Threaded through `App.tsx` → `ReviewPage` → `TypingInput` → `FillBlankInput`.
+- **Cloze rate setting**: `useInputMode` hook now also manages `clozeRate` (30–70%, default 30%, persisted in localStorage). When "Fill in Blank (Cloze)" is selected on the Profile page, a `ClozeRateSlider` appears with a difficulty gradient (olive→amber→warmBrown→near-black) and a number input. The number input uses `inputMode="numeric"` and `pattern="[0-9]*"` for mobile numpad, with `Math.round()` to coerce decimals. Threaded through `App.tsx` → `ReviewPage` → `TypingInput` → `FillBlankInput`.
 - **Diminishing XP display fix**: `useGamification.recordReview` now returns the actual `earnedXp` (after diminishing returns). `ReviewPage.handleGrade` uses the returned value instead of the base `xpForRating(grade)`, so the "Review Complete" screen shows the correct XP earned.
+- **Minimum 1 XP per review**: Diminishing returns floor at 1 XP instead of 0. Reviewing a verse always earns at least 1 XP regardless of how many times it's been reviewed that day.
+- **Dynamic version display**: Profile page reads `__APP_VERSION__` (injected at build time from `package.json` via Vite `define`). No hardcoded version strings — update the version in `package.json` only. See `AGENTS.md` Versioning section for SemVer policy.
+- **Google sign-in re-auth fix**: `signInWithGoogle()` in `firebase.ts` now uses `signInWithCredential` (extracting the credential from the `linkWithPopup` error) instead of `signInWithPopup` when `auth/credential-already-in-use` occurs. This fixes sign-in failing after sign-out or PWA reinstall, since browsers block the second popup when the user gesture was consumed by the first.
+- **Custom PWA icons**: Placeholder icon files added to `public/`: `icon-192.png` (192×192), `icon-512.png` (512×512), `apple-touch-icon.png` (192×192). Replace these with custom artwork at the same filenames/sizes.
+- **Learning Phase System**: New 3-phase progressive learning for verses: Beginner → Learning → Mastered. New verses start as `beginner`. See "Learning Phase System" section below for full details.
+- **"Verses Mastered" stat**: Dashboard and Profile pages now show "Verses Mastered" (count of verses with `learningPhase === 'mastered'`) instead of "Total Reviews".
+- **Drip-feed day-of-week picker**: `Collection.dripDays` (optional `number[]`, 0=Sun..6=Sat) lets users choose which days of the week to drip new verses. The old `dripPeriod` ('day'/'week') dropdown in `CollectionSettings` is replaced by a visual S M T W T F S toggle. `useDrip` counts how many selected days fell between `dripLastChecked` and today to determine how many batches to activate. Legacy collections without `dripDays` fall back to the old `dripPeriod` behavior.
 
 ## Color Palette (Japandi Theme)
 
@@ -107,6 +115,25 @@ Firestore rejects `undefined` field values. This was a recurring bug. Two patter
    const doc = { name, description };
    ```
 
+### Learning Phase System
+
+New verses go through a 3-phase progressive learning system before entering standard SRS review:
+
+1. **Beginner** (`learningPhase: 'beginner'`): Guided first-letter mode — verse words are shown dimmed (not as underscores). User types the first letter of each word. Auto-grades as Good. One completion advances to Learning. Uses `GuidedInput.tsx`.
+
+2. **Learning** (`learningPhase: 'learning'`): Cloze 50% mode — uses `FillBlankInput` with `clozeRate=50`, regardless of user's configured rate. Normal grading. Grade of Good (3) or Easy (4) advances to Mastered. Again or Hard stays in Learning.
+
+3. **Mastered** (`learningPhase: 'mastered'`): Standard review using the user's configured input mode. FSRS handles scheduling forever.
+
+**Key implementation details:**
+- `Verse.learningPhase` field in Firestore. Existing verses without this field default to `'mastered'` (backward compat in `useVerses.ts` `onSnapshot`).
+- `TypingInput.tsx` checks `learningPhase` prop before `mode` prop. Beginner → `GuidedInput`, Learning → `FillBlankInput` at 50%, Mastered → user preference.
+- `ReviewPage.handleGrade` calls `onAdvanceLearningPhase` (wired to `updateVerseLearningPhase` from `useVerses`) after grading to advance the phase.
+- Beginner verses auto-grade as Good (skip grading screen), same pattern as sequential/continuous mode.
+- Sequential/continuous mode auto-grades Good, so beginner verses advance to learning and learning verses advance to mastered during continuous review.
+- `VerseCard.tsx` shows amber "Beginner" and olive "Learning" tags. Mastered verses show no phase tag.
+- Dashboard and Profile show "Verses Mastered" (computed: `verses.filter(v => v.learningPhase === 'mastered').length`) instead of "Total Reviews".
+
 ### FSRS Types
 
 - Use `Grade` (not `Rating`) for review grades. `Grade` = `Rating` minus `Rating.Manual`.
@@ -132,7 +159,7 @@ The drip-feed system spans multiple files and requires careful coordination:
    - Existing collection: new verses are appended past the cursor, so `active: false`
    - The wrapper also updates the collection's `verseOrder` array and initializes `dripCursor`
 
-2. **Periodic activation**: `useDrip` hook runs on app load, checks each drip collection, calculates elapsed periods since `dripLastChecked`, and activates the next batch of verses by advancing `dripCursor`.
+2. **Periodic activation**: `useDrip` hook runs on app load, checks each drip collection, calculates elapsed periods since `dripLastChecked`, and activates the next batch of verses by advancing `dripCursor`. When `dripDays` is set, it counts how many selected days fell in the range `(dripLastChecked, today]` using `countDripDaysInRange()`. If today is not a drip day, no verses are activated but `dripLastChecked` is still updated. Legacy collections without `dripDays` fall back to the old `dripPeriod` behavior.
 
 3. **Manual review activation**: When a queued verse is reviewed (via tap-to-review), `handleActivateReviewedVerse` in `App.tsx` activates that verse and advances the `dripCursor`, also activating the next verse at the cursor position. Called from `ReviewPage.handleGrade`.
 
@@ -158,7 +185,7 @@ Both `VerseCard.tsx` and `CollectionCard.tsx` use the same 3-dot vertical menu p
 
 In `HomePage.tsx`, when `viewCollectionId` is set (by clicking a collection card), the component renders a detail view instead of the main library. Verses are filtered by collection membership and sorted via `compareReferences()` from `bibleApi.ts`. The view includes a back button, collection name/description, verse count, and the full verse list with tap-to-review support.
 
-Tapping a verse in the collection detail view triggers a review prompt (Framer Motion bottom sheet). The prompt offers "This Verse" (single-verse review at `/review?verseId=...`) or "In Order" (continuous review at `/review?collectionId=...&startVerseId=...&mode=sequential`). The "In Order" option shows the count of remaining verses. For the last verse in the collection, the prompt is skipped and it goes directly to single-verse review.
+Tapping a verse in the collection detail view triggers a review prompt (Framer Motion centered modal popup with scale-in animation). The prompt offers "This Verse" (single-verse review at `/review?verseId=...`) or "In Order" (continuous review at `/review?collectionId=...&startVerseId=...&mode=sequential`). The "In Order" option shows the count of remaining verses. For the last verse in the collection, the prompt is skipped and it goes directly to single-verse review.
 
 ### Fill in Blank (Cloze) Mode
 
@@ -177,21 +204,33 @@ Tapping a verse in the collection detail view triggers a review prompt (Framer M
 
 `CollectionSelect.tsx` is a reusable searchable single-select dropdown for collections. It accepts `collections`, `selectedId`, `onChange`, optional `placeholder`, and optional `verseCounts`. Used in both `AddVerseModal` (replacing old multi-select) and `ReviewPage` scope picker. Note: `AddVerseModal` now uses a single `selectedCollectionId: string | null` state instead of the old `selectedCollections: string[]` array.
 
+### Google Sign-In Re-Auth
+
+When a user signs out and back in (or reinstalls the PWA), a new anonymous user is created. `linkWithPopup` then fails with `auth/credential-already-in-use` because the Google account is already linked to the old UID. The fallback extracts the OAuth credential from the error via `GoogleAuthProvider.credentialFromError()` and calls `signInWithCredential(auth, credential)` — this avoids opening a second popup (which browsers block since the user gesture was consumed by the first). Do NOT replace this with `signInWithPopup` — it will break.
+
+### Versioning
+
+The app version lives solely in `package.json`. Vite injects it at build time as `__APP_VERSION__` (declared in `vite-env.d.ts`). The Profile page displays it. See `AGENTS.md` for the SemVer bump policy. Never hardcode a version string anywhere else.
+
+### Tailwind `space-y-*` Caution
+
+Avoid using `space-y-*` on containers whose children are conditionally rendered or dynamically inserted. In the `ClozeRateSlider` component, `space-y-2` caused child elements to visually collapse. The fix was switching to explicit `mt-2` margins on individual children. Prefer explicit margins when layout stability matters.
+
 ### npm Registry
 
 The global `~/.npmrc` points to a corporate Artifactory. The project has a local `.npmrc` that overrides to the public registry. **Do not delete `.npmrc` from the project root.**
 
-## File Map (33 source files)
+## File Map (34 source files)
 
 ```
 src/
   main.tsx                            # Entry point (BrowserRouter with dynamic basename for GH Pages)
   App.tsx                             # Routes + hooks wiring + drip-aware add/activate wrappers + AddVerseModal
   index.css                           # Tailwind + Japandi component classes (light + dark) + hidden scrollbar
-  vite-env.d.ts                       # Env var types
+  vite-env.d.ts                       # Env var types + __APP_VERSION__ global declaration
   types/index.ts                      # All types + gamification utils
   lib/
-    firebase.ts                       # Firebase init + auth helpers
+    firebase.ts                       # Firebase init + auth helpers (signInWithCredential fallback for re-auth)
     bibleApi.ts                       # ESV API client (getPassage, getPassageVerses, searchVerses, compareReferences)
     fsrs.ts                           # ts-fsrs wrapper + Firestore serialization
   hooks/
@@ -215,7 +254,8 @@ src/
     library/CollectionCard.tsx        # Collection list item + 3-dot menu
     library/CollectionSettings.tsx    # Drip-feed configuration UI
     library/CollectionSelect.tsx      # Searchable single-select dropdown for collections
-    review/TypingInput.tsx            # Typing input router (full / firstLetter / fillBlank) + clozeRate passthrough
+    review/TypingInput.tsx            # Typing input router (full / firstLetter / fillBlank / guided) + learningPhase override
+    review/GuidedInput.tsx            # Beginner phase: first-letter reveal with dimmed word text visible
     review/FirstLetterInput.tsx       # Word-by-word first-letter reveal + accurate blanks + "Need help?"
     review/FillBlankInput.tsx         # Cloze deletion: stop-word-aware keyword blanking + interactive word input
     review/SelfGrade.tsx              # Grade buttons (Again/Hard/Good/Easy) — Japandi palette

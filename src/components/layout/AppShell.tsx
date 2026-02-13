@@ -17,7 +17,9 @@ export default function AppShell({ onAddPress }: AppShellProps) {
 
   return (
     <div className="h-[100dvh] overflow-hidden bg-parchment-50 dark:bg-warmBrown-900 font-sans">
-      <main ref={mainRef} className="h-full overflow-y-auto max-w-lg mx-auto pb-20 px-4 pt-3">
+      <main ref={mainRef} className="h-full overflow-y-auto max-w-lg mx-auto px-4 pt-3"
+        style={{ paddingBottom: 'calc(6rem + env(safe-area-inset-bottom, 0px))' }}
+      >
         <Outlet />
       </main>
       <BottomNav onAddPress={onAddPress} />

@@ -2,6 +2,8 @@ import type { Card } from 'ts-fsrs';
 
 // ─── App Data Types ─────────────────────────────────────────
 
+export type LearningPhase = 'beginner' | 'learning' | 'mastered';
+
 export interface Verse {
   id: string;
   reference: string;       // canonical ESV reference, e.g. "John 3:16"
@@ -10,6 +12,7 @@ export interface Verse {
   collectionIds: string[];
   fsrsCard: Card;
   active: boolean;         // whether the verse is in the SRS review stack (drip-feed)
+  learningPhase: LearningPhase; // beginner -> learning -> mastered progression
   createdAt: number;       // timestamp ms
 }
 
@@ -20,8 +23,9 @@ export interface Collection {
   verseOrder: string[];    // ordered verse IDs for sequential review
   createdAt: number;       // timestamp ms
   // Drip-feed settings
-  dripRate?: number;       // how many new verses to add per period
-  dripPeriod?: 'day' | 'week';
+  dripRate?: number;       // how many new verses to add per drip day
+  dripPeriod?: 'day' | 'week'; // legacy — superseded by dripDays when set
+  dripDays?: number[];     // days of the week to drip (0=Sun, 1=Mon, ..., 6=Sat)
   dripCursor?: number;     // index into verseOrder of next verse to activate
   dripLastChecked?: string; // YYYY-MM-DD of last drip check
 }

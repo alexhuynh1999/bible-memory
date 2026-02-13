@@ -42,8 +42,8 @@ export default function ProfilePage({
 
         <div className="grid grid-cols-2 gap-3 pt-2">
           <div className="bg-parchment-50 dark:bg-warmBrown-700 rounded-xl p-3 text-center">
-            <p className="text-2xl font-bold text-warmBrown-700 dark:text-parchment-200">{profile.totalVersesReviewed}</p>
-            <p className="text-xs text-warmBrown-500 dark:text-parchment-400">Total Reviews</p>
+            <p className="text-2xl font-bold text-warmBrown-700 dark:text-parchment-200">{verses.filter((v) => v.learningPhase === 'mastered').length}</p>
+            <p className="text-xs text-warmBrown-500 dark:text-parchment-400">Verses Mastered</p>
           </div>
           <div className="bg-parchment-50 dark:bg-warmBrown-700 rounded-xl p-3 text-center">
             <p className="text-2xl font-bold text-warmBrown-700 dark:text-parchment-200">{verses.length}</p>

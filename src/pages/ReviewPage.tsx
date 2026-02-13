@@ -8,7 +8,7 @@ import CollectionSelect from '@/components/library/CollectionSelect';
 import { isDue, scheduleReview, Rating, type Grade } from '@/lib/fsrs';
 import { compareReferences } from '@/lib/bibleApi';
 import { xpForRating } from '@/types';
-import type { Verse, Collection, InputMode, ReviewMode, ReviewScope } from '@/types';
+import type { Verse, Collection, InputMode, LearningPhase, ReviewMode, ReviewScope } from '@/types';
 
 interface ReviewPageProps {
   verses: Verse[];
@@ -18,6 +18,7 @@ interface ReviewPageProps {
   onUpdateFsrs: (verseId: string, card: import('ts-fsrs').Card) => Promise<void>;
   onRecordReview: (rating: number, verseId: string) => Promise<number>;
   onActivateVerse?: (verseId: string) => Promise<void>;
+  onAdvanceLearningPhase?: (verseId: string, phase: LearningPhase) => Promise<void>;
 }
 
 type ReviewPhase = 'scope' | 'mode' | 'typing' | 'grading' | 'complete';
@@ -39,6 +40,7 @@ export default function ReviewPage({
   onUpdateFsrs,
   onRecordReview,
   onActivateVerse,
+  onAdvanceLearningPhase,
 }: ReviewPageProps) {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
@@ -156,8 +158,8 @@ export default function ReviewPage({
 
   const handleTypingComplete = (typed: string) => {
     setUserInput(typed);
-    if (mode === 'sequential') {
-      // Continuous stream: auto-grade as Good and advance without grading screen
+    if (mode === 'sequential' || currentVerse?.learningPhase === 'beginner') {
+      // Continuous stream or beginner phase: auto-grade as Good and advance without grading screen
       handleGrade(Rating.Good as Grade);
     } else {
       setPhase('grading');
@@ -178,6 +180,17 @@ export default function ReviewPage({
     // If the verse was queued (inactive), activate it and advance drip
     if (currentVerse.active === false && onActivateVerse) {
       await onActivateVerse(currentVerse.id);
+    }
+
+    // Advance learning phase if applicable
+    if (onAdvanceLearningPhase) {
+      if (currentVerse.learningPhase === 'beginner') {
+        // Beginner always advances to learning after completion
+        await onAdvanceLearningPhase(currentVerse.id, 'learning');
+      } else if (currentVerse.learningPhase === 'learning' && grade >= Rating.Good) {
+        // Learning advances to mastered on Good or Easy
+        await onAdvanceLearningPhase(currentVerse.id, 'mastered');
+      }
     }
 
     // Move to next verse or complete
@@ -383,13 +396,27 @@ export default function ReviewPage({
                     {currentVerse.reference}
                   </h2>
                   <p className="text-xs text-warmBrown-400 dark:text-parchment-500 mt-1">
-                    Recall this verse from memory
+                    {currentVerse.learningPhase === 'beginner'
+                      ? 'Read along and follow the verse'
+                      : currentVerse.learningPhase === 'learning'
+                      ? 'Fill in the missing words'
+                      : 'Recall this verse from memory'}
                   </p>
+                  {currentVerse.learningPhase !== 'mastered' && (
+                    <span className={`inline-block mt-1.5 text-[10px] font-medium px-2 py-0.5 rounded-full ${
+                      currentVerse.learningPhase === 'beginner'
+                        ? 'bg-amber-100 text-amber-700 dark:bg-amber-900/40 dark:text-amber-300'
+                        : 'bg-olive-100 text-olive-700 dark:bg-olive-900/40 dark:text-olive-300'
+                    }`}>
+                      {currentVerse.learningPhase === 'beginner' ? 'Beginner' : 'Learning'}
+                    </span>
+                  )}
                 </div>
                 <TypingInput
                   verseText={currentVerse.text}
                   mode={inputMode}
                   clozeRate={clozeRate}
+                  learningPhase={currentVerse.learningPhase}
                   onComplete={handleTypingComplete}
                 />
               </div>

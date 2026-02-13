@@ -66,6 +66,16 @@ export default function VerseCard({ verse, collections, onClick, onRemove, onUpd
               Queued
             </span>
           )}
+          {verse.learningPhase === 'beginner' && (
+            <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-amber-100 text-amber-800 dark:bg-amber-900/40 dark:text-amber-300">
+              Beginner
+            </span>
+          )}
+          {verse.learningPhase === 'learning' && (
+            <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-olive-100 text-olive-700 dark:bg-olive-900/40 dark:text-olive-300">
+              Learning
+            </span>
+          )}
           {isDueNow ? (
             <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-amber-100 text-amber-800 dark:bg-amber-900/50 dark:text-amber-300">
               Due

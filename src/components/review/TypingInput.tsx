@@ -1,16 +1,29 @@
 import { useState, useRef, useEffect } from 'react';
-import type { InputMode } from '@/types';
+import type { InputMode, LearningPhase } from '@/types';
 import FirstLetterInput from './FirstLetterInput';
 import FillBlankInput from './FillBlankInput';
+import GuidedInput from './GuidedInput';
 
 interface TypingInputProps {
   verseText: string;
   mode: InputMode;
   clozeRate?: number;
+  learningPhase?: LearningPhase;
   onComplete: (typed: string) => void;
 }
 
-export default function TypingInput({ verseText, mode, clozeRate, onComplete }: TypingInputProps) {
+export default function TypingInput({ verseText, mode, clozeRate, learningPhase, onComplete }: TypingInputProps) {
+  // Beginner phase: guided input (words shown dimmed, type first letter)
+  if (learningPhase === 'beginner') {
+    return <GuidedInput verseText={verseText} onComplete={onComplete} />;
+  }
+
+  // Learning phase: forced cloze 50% regardless of user preference
+  if (learningPhase === 'learning') {
+    return <FillBlankInput verseText={verseText} clozeRate={50} onComplete={onComplete} />;
+  }
+
+  // Mastered phase (or undefined): use user's configured input mode
   if (mode === 'firstLetter') {
     return <FirstLetterInput verseText={verseText} onComplete={onComplete} />;
   }

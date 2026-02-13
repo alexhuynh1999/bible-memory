@@ -49,8 +49,8 @@ export default function DashboardPage({
           <p className="text-xs text-warmBrown-500 dark:text-parchment-400 mt-1">Collections</p>
         </div>
         <div className="card text-center !py-4">
-          <p className="text-3xl font-bold text-warmBrown-700 dark:text-parchment-200">{profile.totalVersesReviewed}</p>
-          <p className="text-xs text-warmBrown-500 dark:text-parchment-400 mt-1">Total Reviews</p>
+          <p className="text-3xl font-bold text-warmBrown-700 dark:text-parchment-200">{verses.filter((v) => v.learningPhase === 'mastered').length}</p>
+          <p className="text-xs text-warmBrown-500 dark:text-parchment-400 mt-1">Verses Mastered</p>
         </div>
       </div>
 

@@ -10,7 +10,7 @@ import {
 } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import { createNewCard, cardForFirestore, cardFromFirestore } from '@/lib/fsrs';
-import type { Verse } from '@/types';
+import type { Verse, LearningPhase } from '@/types';
 import type { Card } from 'ts-fsrs';
 
 function versesCollection(uid: string) {
@@ -36,6 +36,7 @@ export function useVerses(uid: string | null) {
           ...raw,
           id: d.id,
           active: raw.active ?? true, // backward compat: default to true
+          learningPhase: raw.learningPhase ?? 'mastered', // backward compat: existing verses are mastered
           fsrsCard: cardFromFirestore(raw.fsrsCard as Record<string, unknown>),
         } as Verse;
       });
@@ -48,7 +49,7 @@ export function useVerses(uid: string | null) {
 
   const addVerse = useCallback(
     async (
-      verseData: Omit<Verse, 'id' | 'fsrsCard' | 'createdAt' | 'collectionIds' | 'active'>,
+      verseData: Omit<Verse, 'id' | 'fsrsCard' | 'createdAt' | 'collectionIds' | 'active' | 'learningPhase'>,
       options?: { collectionIds?: string[]; active?: boolean }
     ) => {
       if (!uid) return;
@@ -59,6 +60,7 @@ export function useVerses(uid: string | null) {
         id: docRef.id,
         collectionIds: options?.collectionIds ?? [],
         active: options?.active ?? true,
+        learningPhase: 'beginner',
         fsrsCard,
         createdAt: Date.now(),
       };
@@ -71,7 +73,7 @@ export function useVerses(uid: string | null) {
 
   const addVersesBatch = useCallback(
     async (
-      versesData: Omit<Verse, 'id' | 'fsrsCard' | 'createdAt' | 'collectionIds' | 'active'>[],
+      versesData: Omit<Verse, 'id' | 'fsrsCard' | 'createdAt' | 'collectionIds' | 'active' | 'learningPhase'>[],
       options?: { collectionIds?: string[]; active?: boolean }
     ) => {
       if (!uid) return;
@@ -84,6 +86,7 @@ export function useVerses(uid: string | null) {
           id: docRef.id,
           collectionIds: options?.collectionIds ?? [],
           active: options?.active ?? true,
+          learningPhase: 'beginner',
           fsrsCard,
           createdAt: Date.now(),
         };
@@ -122,6 +125,15 @@ export function useVerses(uid: string | null) {
     [uid]
   );
 
+  const updateVerseLearningPhase = useCallback(
+    async (verseId: string, learningPhase: LearningPhase) => {
+      if (!uid) return;
+      const docRef = doc(versesCollection(uid), verseId);
+      await setDoc(docRef, { learningPhase }, { merge: true });
+    },
+    [uid]
+  );
+
   const removeVerse = useCallback(
     async (verseId: string) => {
       if (!uid) return;
@@ -138,6 +150,7 @@ export function useVerses(uid: string | null) {
     updateVerseFsrs,
     updateVerseCollections,
     updateVerseActive,
+    updateVerseLearningPhase,
     removeVerse,
   };
 }

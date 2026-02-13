@@ -7,11 +7,32 @@ interface CollectionSettingsProps {
   onClose: () => void;
 }
 
+const DAY_LABELS = ['S', 'M', 'T', 'W', 'T', 'F', 'S'] as const;
+const ALL_DAYS = [0, 1, 2, 3, 4, 5, 6];
+
+/** Migrate legacy dripPeriod to dripDays. */
+function initDripDays(coll: Collection): number[] {
+  if (coll.dripDays && coll.dripDays.length > 0) return coll.dripDays;
+  if (coll.dripPeriod === 'week') return [1]; // legacy "weekly" → Monday only
+  return ALL_DAYS; // legacy "daily" or default → every day
+}
+
 export default function CollectionSettings({ collection, onUpdate, onClose }: CollectionSettingsProps) {
   const [dripEnabled, setDripEnabled] = useState(!!collection.dripRate);
   const [dripRate, setDripRate] = useState(collection.dripRate ?? 3);
-  const [dripPeriod, setDripPeriod] = useState<'day' | 'week'>(collection.dripPeriod ?? 'day');
+  const [dripDays, setDripDays] = useState<number[]>(() => initDripDays(collection));
   const [saving, setSaving] = useState(false);
+
+  const toggleDay = (day: number) => {
+    setDripDays((prev) => {
+      if (prev.includes(day)) {
+        // Don't allow deselecting the last day
+        if (prev.length <= 1) return prev;
+        return prev.filter((d) => d !== day);
+      }
+      return [...prev, day].sort();
+    });
+  };
 
   const handleSave = async () => {
     setSaving(true);
@@ -19,7 +40,7 @@ export default function CollectionSettings({ collection, onUpdate, onClose }: Co
       if (dripEnabled) {
         await onUpdate(collection.id, {
           dripRate,
-          dripPeriod,
+          dripDays,
           ...(collection.dripCursor === undefined && { dripCursor: 0 }),
         });
       } else {
@@ -68,7 +89,7 @@ export default function CollectionSettings({ collection, onUpdate, onClose }: Co
 
       {dripEnabled && (
         <div className="space-y-3 pl-8">
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-2 flex-wrap">
             <span className="text-sm text-warmBrown-700 dark:text-parchment-200">Add</span>
             <input
               type="number"
@@ -78,15 +99,28 @@ export default function CollectionSettings({ collection, onUpdate, onClose }: Co
               onChange={(e) => setDripRate(Math.max(1, parseInt(e.target.value) || 1))}
               className="input-field !w-16 text-center !px-2"
             />
-            <span className="text-sm text-warmBrown-700 dark:text-parchment-200">new verses per</span>
-            <select
-              value={dripPeriod}
-              onChange={(e) => setDripPeriod(e.target.value as 'day' | 'week')}
-              className="input-field !w-24 !px-2"
-            >
-              <option value="day">day</option>
-              <option value="week">week</option>
-            </select>
+            <span className="text-sm text-warmBrown-700 dark:text-parchment-200">new verse{dripRate !== 1 ? 's' : ''} on</span>
+          </div>
+
+          {/* Day-of-week picker */}
+          <div className="flex gap-1.5">
+            {DAY_LABELS.map((label, idx) => {
+              const isSelected = dripDays.includes(idx);
+              return (
+                <button
+                  key={idx}
+                  type="button"
+                  onClick={() => toggleDay(idx)}
+                  className={`w-9 h-9 rounded-full text-xs font-semibold transition-colors ${
+                    isSelected
+                      ? 'bg-warmBrown-600 text-white dark:bg-olive-500 dark:text-warmBrown-900'
+                      : 'bg-parchment-100 text-warmBrown-400 hover:bg-parchment-200 dark:bg-warmBrown-700 dark:text-parchment-500 dark:hover:bg-warmBrown-600'
+                  }`}
+                >
+                  {label}
+                </button>
+              );
+            })}
           </div>
 
           {collection.dripCursor !== undefined && (
