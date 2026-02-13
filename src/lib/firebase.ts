@@ -4,6 +4,7 @@ import {
   signInAnonymously,
   GoogleAuthProvider,
   signInWithPopup,
+  signInWithCredential,
   linkWithPopup,
   onAuthStateChanged,
   type User,
@@ -53,9 +54,18 @@ export async function signInWithGoogle(): Promise<User> {
       const result = await linkWithPopup(currentUser, googleProvider);
       return result.user;
     } catch (error: unknown) {
-      // If linking fails (e.g. account already exists), sign in directly
+      // If linking fails (e.g. account already exists), sign in with the credential
+      // directly instead of opening a second popup (which browsers would block).
       const firebaseError = error as { code?: string };
       if (firebaseError.code === 'auth/credential-already-in-use') {
+        const credential = GoogleAuthProvider.credentialFromError(
+          error as Parameters<typeof GoogleAuthProvider.credentialFromError>[0]
+        );
+        if (credential) {
+          const result = await signInWithCredential(auth, credential);
+          return result.user;
+        }
+        // No credential available — fall back to signInWithPopup as last resort
         const result = await signInWithPopup(auth, googleProvider);
         return result.user;
       }
