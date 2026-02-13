@@ -32,7 +32,7 @@ export default function App() {
   const { collections, loading: collectionsLoading, addCollection, updateCollection, removeCollection } = useCollections(uid);
   const { profile, loading: profileLoading, leveledUp, recordReview, dismissLevelUp } = useGamification(uid);
   const { preference: themePreference, setTheme } = useTheme();
-  const { inputMode, setInputMode } = useInputMode();
+  const { inputMode, setInputMode, clozeRate, setClozeRate } = useInputMode();
 
   // Add Verse Modal state (lifted to app level for the nav + button)
   const [showAddVerse, setShowAddVerse] = useState(false);
@@ -250,6 +250,7 @@ export default function App() {
                 verses={verses}
                 collections={collections}
                 inputMode={inputMode}
+                clozeRate={clozeRate}
                 onUpdateFsrs={updateVerseFsrs}
                 onRecordReview={recordReview}
                 onActivateVerse={handleActivateReviewedVerse}
@@ -269,6 +270,8 @@ export default function App() {
                 onSetTheme={setTheme}
                 inputMode={inputMode}
                 onSetInputMode={setInputMode}
+                clozeRate={clozeRate}
+                onSetClozeRate={setClozeRate}
               />
             }
           />

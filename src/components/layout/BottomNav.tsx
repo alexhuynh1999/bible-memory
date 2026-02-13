@@ -45,7 +45,9 @@ const navItems = [
 
 export default function BottomNav({ onAddPress }: BottomNavProps) {
   return (
-    <nav className="fixed bottom-0 left-0 right-0 bg-white dark:bg-warmBrown-800 border-t border-parchment-200 dark:border-warmBrown-700 z-50">
+    <nav className="fixed bottom-0 left-0 right-0 bg-white dark:bg-warmBrown-800 border-t border-parchment-200 dark:border-warmBrown-700 z-50"
+      style={{ paddingBottom: 'env(safe-area-inset-bottom, 0px)' }}
+    >
       <div className="max-w-lg mx-auto flex items-center justify-around h-16">
         {/* First two nav items (Home, Library) */}
         {navItems.slice(0, 2).map((item) => (

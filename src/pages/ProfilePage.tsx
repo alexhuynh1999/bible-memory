@@ -1,3 +1,4 @@
+import { useRef, useEffect } from 'react';
 import XPBar from '@/components/gamification/XPBar';
 import StreakCounter from '@/components/gamification/StreakCounter';
 import type { UserProfile, Verse, InputMode } from '@/types';
@@ -13,6 +14,8 @@ interface ProfilePageProps {
   onSetTheme: (pref: ThemePreference) => void;
   inputMode: InputMode;
   onSetInputMode: (mode: InputMode) => void;
+  clozeRate: number;
+  onSetClozeRate: (rate: number) => void;
 }
 
 export default function ProfilePage({
@@ -25,6 +28,8 @@ export default function ProfilePage({
   onSetTheme,
   inputMode,
   onSetInputMode,
+  clozeRate,
+  onSetClozeRate,
 }: ProfilePageProps) {
   return (
     <div className="space-y-6">
@@ -80,7 +85,7 @@ export default function ProfilePage({
           {([
             { value: 'firstLetter' as const, label: 'First Letter', desc: 'Type the first letter of each word to reveal it' },
             { value: 'full' as const, label: 'Full Text', desc: 'Type the entire verse from memory' },
-            { value: 'fillBlank' as const, label: 'Fill in Blank', desc: 'See first letters as hints, fill in the rest' },
+            { value: 'fillBlank' as const, label: 'Fill in Blank (Cloze)', desc: 'Key words are randomly blanked — type each one' },
           ]).map((opt) => (
             <button
               key={opt.value}
@@ -96,6 +101,11 @@ export default function ProfilePage({
             </button>
           ))}
         </div>
+
+        {/* Cloze rate slider — shown only when Fill in Blank is selected */}
+        {inputMode === 'fillBlank' && (
+          <ClozeRateSlider value={clozeRate} onChange={onSetClozeRate} />
+        )}
       </div>
 
       {/* Account */}
@@ -131,8 +141,115 @@ export default function ProfilePage({
 
       {/* App Info */}
       <div className="text-center text-xs text-warmBrown-400 dark:text-parchment-500 pb-4">
-        <p>Bible Memory v0.1.0</p>
+        <p>Bible Memory v{__APP_VERSION__}</p>
         <p className="mt-1">Powered by FSRS spaced repetition</p>
+      </div>
+    </div>
+  );
+}
+
+// ─── Cloze Rate Slider ────────────────────────────────────────
+
+/**
+ * Difficulty gradient (mapped to Japandi palette, 30–70% range):
+ *  30–40%  olive-200 → olive-500       (easy, pastel green → green)
+ *  40–50%  olive-500 → amber-400       (moderate, green → warm yellow)
+ *  50–60%  amber-400 → warmBrown-600   (hard, yellow → clay red)
+ *  60–70%  warmBrown-600 → warmBrown-900 (very hard, red → near black)
+ */
+const MIN_RATE = 30;
+const MAX_RATE = 70;
+const RANGE = MAX_RATE - MIN_RATE; // 40
+const pct = (v: number) => `${((v - MIN_RATE) / RANGE) * 100}%`;
+const GRADIENT_STYLE = `linear-gradient(to right,
+  #D2D7C5 ${pct(30)},
+  #7A846A ${pct(40)},
+  #C2A878 ${pct(50)},
+  #9C6B4F ${pct(60)},
+  #1F1C19 ${pct(70)}
+)`;
+
+function ClozeRateSlider({ value, onChange }: { value: number; onChange: (v: number) => void }) {
+  const trackRef = useRef<HTMLDivElement>(null);
+
+  // Difficulty label based on value
+  const label =
+    value <= 40 ? 'Easy' :
+    value <= 50 ? 'Moderate' :
+    value <= 60 ? 'Hard' :
+    'Very Hard';
+
+  // Thumb color follows the gradient position
+  const thumbColor =
+    value <= 40 ? '#7A846A' :
+    value <= 50 ? '#C2A878' :
+    value <= 60 ? '#9C6B4F' :
+    '#5E3E31';
+
+  // Keep native range thumb synced with gradient via CSS custom property
+  const rangeRef = useRef<HTMLInputElement>(null);
+  useEffect(() => {
+    if (rangeRef.current) {
+      rangeRef.current.style.setProperty('--thumb-color', thumbColor);
+    }
+  }, [thumbColor]);
+
+  return (
+    <div className="space-y-2 pt-1">
+      <div className="flex items-center justify-between">
+        <label className="text-sm font-medium text-warmBrown-700 dark:text-parchment-200">
+          Blank Rate
+        </label>
+        <span className="text-xs font-medium text-warmBrown-500 dark:text-parchment-400">
+          {label}
+        </span>
+      </div>
+
+      {/* Gradient track + range input */}
+      <div className="relative">
+        <div
+          ref={trackRef}
+          className="h-2 rounded-full"
+          style={{ background: GRADIENT_STYLE }}
+        />
+        <input
+          ref={rangeRef}
+          type="range"
+          min={MIN_RATE}
+          max={MAX_RATE}
+          step={1}
+          value={value}
+          onChange={(e) => onChange(Number(e.target.value))}
+          className="absolute inset-0 w-full h-2 opacity-0 cursor-pointer"
+          style={{ margin: 0 }}
+        />
+        {/* Custom thumb indicator */}
+        <div
+          className="absolute top-1/2 -translate-y-1/2 w-5 h-5 rounded-full border-2 border-white dark:border-warmBrown-900 shadow-md pointer-events-none"
+          style={{
+            left: `calc(${((value - MIN_RATE) / RANGE) * 100}% - 10px)`,
+            backgroundColor: thumbColor,
+            transition: 'left 0.1s ease, background-color 0.2s ease',
+          }}
+        />
+      </div>
+
+      {/* Number input */}
+      <div className="flex items-center gap-2">
+        <input
+          type="number"
+          min={MIN_RATE}
+          max={MAX_RATE}
+          value={value}
+          onChange={(e) => {
+            const n = parseInt(e.target.value, 10);
+            if (!isNaN(n)) onChange(Math.max(MIN_RATE, Math.min(MAX_RATE, n)));
+          }}
+          className="w-16 input-field text-center text-sm !py-1.5 !px-2"
+        />
+        <span className="text-xs text-warmBrown-500 dark:text-parchment-400">
+          % of key words blanked
+        </span>
       </div>
     </div>
   );

@@ -139,6 +139,18 @@ npm run preview     # Preview production build
 npm run lint        # Run ESLint
 ```
 
+## Versioning
+
+This project uses [Semantic Versioning](https://semver.org/) (SemVer). The single source of truth for the version is the `version` field in `package.json`. It is injected at build time via Vite's `define` option (`__APP_VERSION__`) and displayed on the Profile page.
+
+**After every set of changes, bump the version in `package.json`:**
+
+- **MAJOR** (`X.0.0`): Breaking changes — data model migrations, auth flow changes, or anything that would break existing user data or require manual intervention.
+- **MINOR** (`0.X.0`): New features or enhancements — new review modes, new pages, new settings, new integrations.
+- **PATCH** (`0.0.X`): Bug fixes, UI tweaks, copy changes, refactors, dependency updates, or any change that doesn't add or break functionality.
+
+The version bump should be the **last** edit in a set of changes, applied to `package.json` only. Do not hardcode the version anywhere else.
+
 ## Status
 
 - [x] Phase 1: Project scaffolding, dependencies, config, types, lib wrappers, layout, theme

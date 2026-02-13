@@ -1,4 +1,5 @@
-import { Outlet } from 'react-router-dom';
+import { useRef, useEffect } from 'react';
+import { Outlet, useLocation } from 'react-router-dom';
 import BottomNav from './BottomNav';
 
 interface AppShellProps {
@@ -6,9 +7,17 @@ interface AppShellProps {
 }
 
 export default function AppShell({ onAddPress }: AppShellProps) {
+  const location = useLocation();
+  const mainRef = useRef<HTMLElement>(null);
+
+  // Scroll to top when navigating between pages
+  useEffect(() => {
+    mainRef.current?.scrollTo(0, 0);
+  }, [location.pathname]);
+
   return (
     <div className="h-[100dvh] overflow-hidden bg-parchment-50 dark:bg-warmBrown-900 font-sans">
-      <main className="h-full overflow-y-auto max-w-lg mx-auto pb-20 px-4 pt-3">
+      <main ref={mainRef} className="h-full overflow-y-auto max-w-lg mx-auto pb-20 px-4 pt-3">
         <Outlet />
       </main>
       <BottomNav onAddPress={onAddPress} />

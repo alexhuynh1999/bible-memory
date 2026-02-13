@@ -55,10 +55,10 @@ function calculateDiminishedXp(
   }
 
   // Same or worse rating: diminishing returns
-  // Halve for each subsequent review: base -> base/2 -> base/4 -> ...
+  // Halve for each subsequent review: base -> base/2 -> base/4 -> ... min 1
   const reviewCount = entry.count;
   const diminished = Math.floor(fullXp / Math.pow(2, reviewCount));
-  return diminished; // Will naturally reach 0
+  return Math.max(diminished, 1);
 }
 
 export function useGamification(uid: string | null) {
@@ -92,9 +92,9 @@ export function useGamification(uid: string | null) {
     return unsubscribe;
   }, [uid]);
 
-  /** Record a review and update XP, streak, etc. */
+  /** Record a review and update XP, streak, etc. Returns actual XP earned. */
   const recordReview = useCallback(
-    async (rating: number, verseId: string) => {
+    async (rating: number, verseId: string): Promise<number> => {
       if (!uid) return;
 
       const today = todayStr();
@@ -145,6 +145,8 @@ export function useGamification(uid: string | null) {
       if (newLevel > oldLevel) {
         setLeveledUp(true);
       }
+
+      return earnedXp;
     },
     [uid, profile]
   );

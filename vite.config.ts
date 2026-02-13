@@ -2,6 +2,7 @@ import { defineConfig } from 'vite'
 import react from '@vitejs/plugin-react'
 import { VitePWA } from 'vite-plugin-pwa'
 import path from 'path'
+import pkg from './package.json' with { type: 'json' }
 
 // GitHub Pages deploys to /<repo-name>/. Set BASE_PATH env var in CI.
 // Defaults to '/' for local dev.
@@ -9,6 +10,9 @@ const base = process.env.BASE_PATH || '/'
 
 export default defineConfig({
   base,
+  define: {
+    __APP_VERSION__: JSON.stringify(pkg.version),
+  },
   plugins: [
     react(),
     VitePWA({

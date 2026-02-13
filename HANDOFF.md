@@ -26,7 +26,7 @@ The entire app MVP is functional and building cleanly. All 6 original phases are
 - **Tweak 1 — Add to Collections + Passage Ranges**: Verses can be assigned to a collection when adding (single-select). Passage ranges (e.g. "Psalm 23", "Genesis 1:1-5") are auto-split verse-by-verse. Existing verses can be assigned to collections via a checkbox picker on `VerseCard`.
 - **Tweak 2 — Restructured Review Workflow**: 2-step flow: choose scope (Library / Collection) then mode (SRS Due / Random / Sequential). Types: `ReviewScope = 'library' | 'collection'`, `ReviewMode`.
 - **Tweak 3 — First Letter Mode + Fill in Blank**: New `FirstLetterInput.tsx` component (type first letter to reveal words). Old first-letter behavior renamed to "Fill in the Blank". `InputMode = 'full' | 'firstLetter' | 'fillBlank'`.
-- **Tweak 4 — Diminishing XP**: `dailyReviewLog` on `UserProfile` tracks per-verse reviews. Repeated reviews of the same verse yield halved XP (10→5→2→1→0). Better ratings award the differential.
+- **Tweak 4 — Diminishing XP**: `dailyReviewLog` on `UserProfile` tracks per-verse reviews. Repeated reviews of the same verse yield halved XP (10→5→2→1, minimum 1). Better ratings award the differential.
 - **Tweak 5 — Dark Mode**: `darkMode: 'class'` in Tailwind. `useTheme` hook manages light/dark/system preference. All components have `dark:` variants. Theme toggle on Profile page.
 - **Tweak 6 — Drip-Feed**: Collections can have `dripRate` / `dripPeriod`. Verses have `active: boolean`. Drip-aware add wrappers in `App.tsx` control which verses start active. `useDrip` hook activates queued verses over time.
 - **Tweak 7 — Dashboard + 5-Tab Navigation**: Restructured navigation from 3 tabs to 5 tabs: Home, Library, + (Add), Review, Profile. New `DashboardPage` at `/` shows user summary (level, XP, streak, stats, review CTA, quick links). Library page moved to `/library` and stripped to only verse/collection content. The + button is a prominent center FAB in the bottom nav that opens the AddVerseModal (lifted to `App.tsx`). `AppShell` passes `onAddPress` callback through to `BottomNav`.
@@ -48,6 +48,17 @@ The entire app MVP is functional and building cleanly. All 6 original phases are
 - **Add Verse modal resets on close**: A `useEffect` in `AddVerseModal.tsx` calls `handleReset()` when `open` becomes `false`, clearing all search data.
 - **Searchable collection selector**: New `CollectionSelect.tsx` component — a searchable single-select dropdown. Used in both `AddVerseModal` (replaced multi-select toggle buttons) and `ReviewPage` scope picker (replaced button list). Supports optional verse counts per collection.
 - **Japandi color palette**: Complete theme overhaul (see "Color Palette" section below).
+
+**Latest Session Changes:**
+- **Continuous "In Order" review mode**: Sequential review mode no longer shows the grading screen between verses. After typing completes, it auto-grades as `Rating.Good` and immediately advances to the next verse — a flow-through experience. The mode selector label changed from "Sequential" to "Continuous".
+- **Collection detail tap-to-review prompt**: Tapping a verse in the collection detail view (Library > Collections > [name]) now shows a bottom-sheet prompt with two options: **"This Verse"** (single-verse review) or **"In Order"** (continuous sequential review from that verse through the end of the collection). The last verse in the collection skips the prompt and goes straight to single-verse review.
+- **In Order launch from collection**: `ReviewPage` reads new URL params `collectionId`, `startVerseId`, and `mode=sequential`. When present, it builds a review queue from the collection's verses (sorted by `compareReferences`), starting from the clicked verse, and auto-starts in continuous sequential mode.
+- **GitHub Pages deployment**: `vite.config.ts` reads `BASE_PATH` env var for Vite's `base` config (defaults to `/` for dev). `BrowserRouter` receives `basename={import.meta.env.BASE_URL}`. GitHub Actions workflow at `.github/workflows/deploy.yml` builds and deploys on push to `main`, injecting secrets as env vars. Copies `index.html` to `404.html` for SPA routing. See `DEPLOYMENT.md` for full manual setup guide.
+- **Mobile safe area support**: `viewport-fit=cover` added to the viewport meta tag. `BottomNav` has `padding-bottom: env(safe-area-inset-bottom)` so it clears the home indicator on phones with gesture nav.
+- **Scroll-to-top on navigation**: `AppShell.tsx` uses a `useEffect` on `location.pathname` to call `scrollTo(0, 0)` on the `<main>` scroll container when the route changes. Fixes scroll position persisting across pages.
+- **Fill in Blank (Cloze) mode revamped**: New `FillBlankInput.tsx` component replaces the old textarea approach. Uses a stop-word list (`STOP_WORDS` set) to identify key words (nouns, verbs, adjectives). Randomly blanks a configurable percentage of key words. Blanked words display as underscores (preserving punctuation). User types the full word in a text input for each blank. Same "Need help?" reveal-after-3-wrong-guesses pattern as `FirstLetterInput`. Stop words are never blanked.
+- **Cloze rate setting**: `useInputMode` hook now also manages `clozeRate` (30–70%, default 30%, persisted in localStorage). When "Fill in Blank (Cloze)" is selected on the Profile page, a `ClozeRateSlider` appears with a difficulty gradient (olive→amber→warmBrown→near-black) and a number input. Threaded through `App.tsx` → `ReviewPage` → `TypingInput` → `FillBlankInput`.
+- **Diminishing XP display fix**: `useGamification.recordReview` now returns the actual `earnedXp` (after diminishing returns). `ReviewPage.handleGrade` uses the returned value instead of the base `xpForRating(grade)`, so the "Review Complete" screen shows the correct XP earned.
 
 ## Color Palette (Japandi Theme)
 
@@ -139,9 +150,28 @@ Both `VerseCard.tsx` and `CollectionCard.tsx` use the same 3-dot vertical menu p
 
 `ReviewPage` reads `?verseId=<id>` from URL search params. When present, it finds the verse (active or not), sets it as the sole review queue item, and jumps directly to the typing phase — skipping scope and mode selection. After grading, if the verse was inactive, `onActivateVerse` fires to handle drip activation.
 
+### Collection "In Order" Review Flow
+
+`ReviewPage` also handles `?collectionId=<id>&startVerseId=<id>&mode=sequential` URL params. When all three are present, it filters the user's verses to only those belonging to the collection, sorts them by `compareReferences`, slices from the `startVerseId` onward, and auto-starts in continuous sequential mode (auto-grades `Rating.Good`, no grading screen between verses). The existing `verseId`-based auto-start `useEffect` is guarded to not fire when `collectionId` is present.
+
 ### Collection Detail View
 
 In `HomePage.tsx`, when `viewCollectionId` is set (by clicking a collection card), the component renders a detail view instead of the main library. Verses are filtered by collection membership and sorted via `compareReferences()` from `bibleApi.ts`. The view includes a back button, collection name/description, verse count, and the full verse list with tap-to-review support.
+
+Tapping a verse in the collection detail view triggers a review prompt (Framer Motion bottom sheet). The prompt offers "This Verse" (single-verse review at `/review?verseId=...`) or "In Order" (continuous review at `/review?collectionId=...&startVerseId=...&mode=sequential`). The "In Order" option shows the count of remaining verses. For the last verse in the collection, the prompt is skipped and it goes directly to single-verse review.
+
+### Fill in Blank (Cloze) Mode
+
+`FillBlankInput.tsx` implements word-level cloze deletion:
+- A `STOP_WORDS` set contains ~90 common English words (articles, prepositions, conjunctions, pronouns, common verbs).
+- `tokenize()` splits the verse into tokens, identifies "key words" (not in `STOP_WORDS`), and randomly blanks `clozeRate%` of them (minimum 1 blank).
+- Blanked words display as underscores matching the word length, with punctuation preserved (e.g. "God," → `___,`).
+- User types the full word for each blank in sequence. After 3 wrong guesses, a "Need help?" button appears to auto-reveal with an amber highlight.
+- `clozeRate` (30–70%) is configurable via a slider on the Profile page, persisted in localStorage by `useInputMode`.
+
+### Diminishing XP
+
+`useGamification.recordReview` calculates diminished XP using `dailyReviewLog` on the user's profile (repeated same-day reviews of a verse halve XP: 10→5→2→1, minimum 1). The function returns `Promise<number>` — the actual `earnedXp` — so callers can display it accurately.
 
 ### Searchable Collection Selector
 
@@ -151,11 +181,11 @@ In `HomePage.tsx`, when `viewCollectionId` is set (by clicking a collection card
 
 The global `~/.npmrc` points to a corporate Artifactory. The project has a local `.npmrc` that overrides to the public registry. **Do not delete `.npmrc` from the project root.**
 
-## File Map (32 source files)
+## File Map (33 source files)
 
 ```
 src/
-  main.tsx                            # Entry point
+  main.tsx                            # Entry point (BrowserRouter with dynamic basename for GH Pages)
   App.tsx                             # Routes + hooks wiring + drip-aware add/activate wrappers + AddVerseModal
   index.css                           # Tailwind + Japandi component classes (light + dark) + hidden scrollbar
   vite-env.d.ts                       # Env var types
@@ -168,25 +198,26 @@ src/
     useAuth.ts                        # Auth state management
     useVerses.ts                      # Verse CRUD (Firestore real-time)
     useCollections.ts                 # Collection CRUD
-    useGamification.ts                # XP, level, streak, diminishing XP
+    useGamification.ts                # XP, level, streak, diminishing XP (recordReview returns earnedXp)
     useTheme.ts                       # Light/dark/system theme + color-scheme management
-    useInputMode.ts                   # Typing mode preference (localStorage, default: firstLetter)
+    useInputMode.ts                   # Typing mode + cloze rate preferences (localStorage)
     useDrip.ts                        # Drip-feed activation logic
   pages/
     DashboardPage.tsx                 # Home view — level, XP, streak, stats, review CTA, quick links
-    HomePage.tsx                      # Library view — verses (tap to review) + collections tabs + collection detail view
-    ReviewPage.tsx                    # Review flow (scope -> mode -> typing -> grade) + single-verse via ?verseId=
-    ProfilePage.tsx                   # Stats + auth + theme toggle + typing mode setting
+    HomePage.tsx                      # Library view — verses + collections + collection detail + review prompt overlay
+    ReviewPage.tsx                    # Review flow + single-verse (?verseId=) + collection sequential (?collectionId=&startVerseId=&mode=sequential)
+    ProfilePage.tsx                   # Stats + auth + theme toggle + typing mode + cloze rate slider
   components/
-    layout/AppShell.tsx               # Shell with Outlet (100dvh contained layout), passes onAddPress to BottomNav
-    layout/BottomNav.tsx              # 5-tab nav (Home, Library, +, Review, Profile)
+    layout/AppShell.tsx               # Shell with Outlet (100dvh), scroll-to-top on route change
+    layout/BottomNav.tsx              # 5-tab nav + safe-area-inset-bottom padding
     library/VerseCard.tsx             # Verse list item + 3-dot menu + tap-to-review onClick
     library/AddVerseModal.tsx         # Add verse modal + range splitting + single collection picker
     library/CollectionCard.tsx        # Collection list item + 3-dot menu
     library/CollectionSettings.tsx    # Drip-feed configuration UI
     library/CollectionSelect.tsx      # Searchable single-select dropdown for collections
-    review/TypingInput.tsx            # Typing input router (full / firstLetter / fillBlank)
+    review/TypingInput.tsx            # Typing input router (full / firstLetter / fillBlank) + clozeRate passthrough
     review/FirstLetterInput.tsx       # Word-by-word first-letter reveal + accurate blanks + "Need help?"
+    review/FillBlankInput.tsx         # Cloze deletion: stop-word-aware keyword blanking + interactive word input
     review/SelfGrade.tsx              # Grade buttons (Again/Hard/Good/Easy) — Japandi palette
     review/ReviewComplete.tsx         # Session summary
     gamification/XPBar.tsx            # XP progress bar (olive gradient in dark mode)
@@ -203,10 +234,11 @@ src/
 - [ ] Show drip progress on collection cards (e.g. "5 of 20 verses active")
 - [ ] Allow reordering verses within a collection's `verseOrder`
 - [ ] Unit tests and integration tests
-- [ ] Deployment to Firebase Hosting
 
 ## Reference Documents
 
 - `AGENTS.md` -- Project conventions and full architecture docs
 - `FIREBASE_CONNECTION.md` -- Firebase Console setup guide (auth, Firestore, rules)
+- `DEPLOYMENT.md` -- GitHub Pages deployment guide (secrets, Firebase domain auth, troubleshooting)
+- `.github/workflows/deploy.yml` -- CI/CD workflow for GitHub Pages
 - `.cursor/plans/bible_memory_tweaks_*.plan.md` -- Original detailed implementation plan for all 6 tweaks

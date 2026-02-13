@@ -14,8 +14,9 @@ interface ReviewPageProps {
   verses: Verse[];
   collections: Collection[];
   inputMode: InputMode;
+  clozeRate?: number;
   onUpdateFsrs: (verseId: string, card: import('ts-fsrs').Card) => Promise<void>;
-  onRecordReview: (rating: number, verseId: string) => Promise<void>;
+  onRecordReview: (rating: number, verseId: string) => Promise<number>;
   onActivateVerse?: (verseId: string) => Promise<void>;
 }
 
@@ -34,6 +35,7 @@ export default function ReviewPage({
   verses,
   collections,
   inputMode,
+  clozeRate = 25,
   onUpdateFsrs,
   onRecordReview,
   onActivateVerse,
@@ -169,9 +171,9 @@ export default function ReviewPage({
     const updatedCard = scheduleReview(currentVerse.fsrsCard, grade);
     await onUpdateFsrs(currentVerse.id, updatedCard);
 
-    // Record for gamification (now with verseId)
-    await onRecordReview(grade, currentVerse.id);
-    setTotalXp((prev) => prev + xpForRating(grade));
+    // Record for gamification — returns actual XP after diminishing returns
+    const earnedXp = await onRecordReview(grade, currentVerse.id);
+    setTotalXp((prev) => prev + (earnedXp ?? xpForRating(grade)));
 
     // If the verse was queued (inactive), activate it and advance drip
     if (currentVerse.active === false && onActivateVerse) {
@@ -387,6 +389,7 @@ export default function ReviewPage({
                 <TypingInput
                   verseText={currentVerse.text}
                   mode={inputMode}
+                  clozeRate={clozeRate}
                   onComplete={handleTypingComplete}
                 />
               </div>
