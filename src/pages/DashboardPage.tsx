@@ -22,7 +22,7 @@ export default function DashboardPage({
   const activeVerses = verses.filter((v) => v.active !== false);
 
   return (
-    <div className="space-y-5">
+    <div className="space-y-4">
       {/* Header */}
       <div className="space-y-3">
         <div className="flex items-center justify-between">
