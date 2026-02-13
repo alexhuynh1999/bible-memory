@@ -95,7 +95,7 @@ export function useGamification(uid: string | null) {
   /** Record a review and update XP, streak, etc. Returns actual XP earned. */
   const recordReview = useCallback(
     async (rating: number, verseId: string): Promise<number> => {
-      if (!uid) return;
+      if (!uid) return 0;
 
       const today = todayStr();
       const yesterday = yesterdayStr();

@@ -23,7 +23,7 @@ export default function TypingInput({ verseText, mode, clozeRate, onComplete }: 
   return <FullTextInput verseText={verseText} onComplete={onComplete} />;
 }
 
-function FullTextInput({ verseText, onComplete }: { verseText: string; onComplete: (typed: string) => void }) {
+function FullTextInput({ verseText: _verseText, onComplete }: { verseText: string; onComplete: (typed: string) => void }) {
   const [input, setInput] = useState('');
   const [submitted, setSubmitted] = useState(false);
   const inputRef = useRef<HTMLTextAreaElement>(null);
