@@ -8,11 +8,11 @@ interface AddVerseModalProps {
   open: boolean;
   onClose: () => void;
   onAdd: (
-    verse: Omit<Verse, 'id' | 'fsrsCard' | 'createdAt' | 'collectionIds' | 'active'>,
+    verse: Omit<Verse, 'id' | 'fsrsCard' | 'createdAt' | 'collectionIds' | 'active' | 'learningPhase'>,
     options?: { collectionIds?: string[] }
   ) => Promise<unknown>;
   onAddBatch?: (
-    verses: Omit<Verse, 'id' | 'fsrsCard' | 'createdAt' | 'collectionIds' | 'active'>[],
+    verses: Omit<Verse, 'id' | 'fsrsCard' | 'createdAt' | 'collectionIds' | 'active' | 'learningPhase'>[],
     options?: { collectionIds?: string[] }
   ) => Promise<unknown>;
   collections: Collection[];
