@@ -28,7 +28,7 @@ function LoadingScreen() {
 
 export default function App() {
   const { uid, loading: authLoading, isAnonymous, linkGoogle, signOut } = useAuth();
-  const { verses, loading: versesLoading, addVerse, addVersesBatch, updateVerseFsrs, updateVerseCollections, updateVerseActive, updateVerseLearningPhase, removeVerse } = useVerses(uid);
+  const { verses, loading: versesLoading, addVerse, addVersesBatch, updateVerseFsrs, updateVerseCollections, updateVerseActive, toggleVerseStarred, updateVerseLearningPhase, removeVerse } = useVerses(uid);
   const { collections, loading: collectionsLoading, addCollection, updateCollection, removeCollection } = useCollections(uid);
   const { profile, loading: profileLoading, leveledUp, recordReview, dismissLevelUp } = useGamification(uid);
   const { preference: themePreference, setTheme } = useTheme();
@@ -237,6 +237,7 @@ export default function App() {
                 collections={collections}
                 onRemoveVerse={removeVerse}
                 onUpdateVerseCollections={updateVerseCollections}
+                onToggleStarred={toggleVerseStarred}
                 onAddCollection={addCollection}
                 onUpdateCollection={updateCollection}
                 onRemoveCollection={handleRemoveCollection}

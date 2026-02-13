@@ -13,8 +13,12 @@ export interface Verse {
   fsrsCard: Card;
   active: boolean;         // whether the verse is in the SRS review stack (drip-feed)
   learningPhase: LearningPhase; // beginner -> learning -> mastered progression
+  starred: boolean;        // user-flagged for focused review
   createdAt: number;       // timestamp ms
 }
+
+/** The fields a caller provides when adding a new verse. Everything else is auto-populated. */
+export type NewVerseData = Omit<Verse, 'id' | 'fsrsCard' | 'createdAt' | 'collectionIds' | 'active' | 'learningPhase' | 'starred'>;
 
 export interface Collection {
   id: string;
@@ -48,7 +52,7 @@ export interface UserProfile {
 
 // ─── Review Types ───────────────────────────────────────────
 
-export type ReviewScope = 'library' | 'collection';
+export type ReviewScope = 'starred' | 'collection' | 'library';
 
 export type ReviewMode = 'srs' | 'random' | 'sequential';
 

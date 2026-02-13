@@ -2,17 +2,17 @@ import { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { getPassageVerses, getBookName } from '@/lib/bibleApi';
 import CollectionSelect from './CollectionSelect';
-import type { Verse, Collection } from '@/types';
+import type { NewVerseData, Collection } from '@/types';
 
 interface AddVerseModalProps {
   open: boolean;
   onClose: () => void;
   onAdd: (
-    verse: Omit<Verse, 'id' | 'fsrsCard' | 'createdAt' | 'collectionIds' | 'active' | 'learningPhase'>,
+    verse: NewVerseData,
     options?: { collectionIds?: string[] }
   ) => Promise<unknown>;
   onAddBatch?: (
-    verses: Omit<Verse, 'id' | 'fsrsCard' | 'createdAt' | 'collectionIds' | 'active' | 'learningPhase'>[],
+    verses: NewVerseData[],
     options?: { collectionIds?: string[] }
   ) => Promise<unknown>;
   collections: Collection[];

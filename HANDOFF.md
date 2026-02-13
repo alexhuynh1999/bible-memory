@@ -67,6 +67,9 @@ The entire app MVP is functional and building cleanly. All 6 original phases are
 - **Learning Phase System**: New 3-phase progressive learning for verses: Beginner → Learning → Mastered. New verses start as `beginner`. See "Learning Phase System" section below for full details.
 - **"Verses Mastered" stat**: Dashboard and Profile pages now show "Verses Mastered" (count of verses with `learningPhase === 'mastered'`) instead of "Total Reviews".
 - **Drip-feed day-of-week picker**: `Collection.dripDays` (optional `number[]`, 0=Sun..6=Sat) lets users choose which days of the week to drip new verses. The old `dripPeriod` ('day'/'week') dropdown in `CollectionSettings` is replaced by a visual S M T W T F S toggle. `useDrip` counts how many selected days fell between `dripLastChecked` and today to determine how many batches to activate. Legacy collections without `dripDays` fall back to the old `dripPeriod` behavior.
+- **Starred / Favorited verses**: `Verse.starred` boolean field. Star icon on each `VerseCard` toggles the flag (amber filled when starred, outline when not). `toggleVerseStarred` in `useVerses` flips the value. `ReviewScope` now includes `'starred'` as the first option. Starred review auto-starts in Random mode (skips the mode picker).
+- **`NewVerseData` type alias**: `Omit<Verse, 'id' | 'fsrsCard' | 'createdAt' | 'collectionIds' | 'active' | 'learningPhase' | 'starred'>` defined once in `types/index.ts`. Used in `useVerses.ts` and `AddVerseModal.tsx` to avoid duplicating the Omit everywhere.
+- **Review scope reordered**: Scope picker order is now Starred → Collection → Entire Library (was Library → Collection). Default selection is Starred.
 
 ## Color Palette (Japandi Theme)
 

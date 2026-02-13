@@ -10,7 +10,7 @@ import {
 } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import { createNewCard, cardForFirestore, cardFromFirestore } from '@/lib/fsrs';
-import type { Verse, LearningPhase } from '@/types';
+import type { Verse, NewVerseData, LearningPhase } from '@/types';
 import type { Card } from 'ts-fsrs';
 
 function versesCollection(uid: string) {
@@ -37,6 +37,7 @@ export function useVerses(uid: string | null) {
           id: d.id,
           active: raw.active ?? true, // backward compat: default to true
           learningPhase: raw.learningPhase ?? 'mastered', // backward compat: existing verses are mastered
+          starred: raw.starred ?? false, // backward compat: default to not starred
           fsrsCard: cardFromFirestore(raw.fsrsCard as Record<string, unknown>),
         } as Verse;
       });
@@ -49,7 +50,7 @@ export function useVerses(uid: string | null) {
 
   const addVerse = useCallback(
     async (
-      verseData: Omit<Verse, 'id' | 'fsrsCard' | 'createdAt' | 'collectionIds' | 'active' | 'learningPhase'>,
+      verseData: NewVerseData,
       options?: { collectionIds?: string[]; active?: boolean }
     ) => {
       if (!uid) return;
@@ -61,6 +62,7 @@ export function useVerses(uid: string | null) {
         collectionIds: options?.collectionIds ?? [],
         active: options?.active ?? true,
         learningPhase: 'beginner',
+        starred: false,
         fsrsCard,
         createdAt: Date.now(),
       };
@@ -73,7 +75,7 @@ export function useVerses(uid: string | null) {
 
   const addVersesBatch = useCallback(
     async (
-      versesData: Omit<Verse, 'id' | 'fsrsCard' | 'createdAt' | 'collectionIds' | 'active' | 'learningPhase'>[],
+      versesData: NewVerseData[],
       options?: { collectionIds?: string[]; active?: boolean }
     ) => {
       if (!uid) return;
@@ -87,6 +89,7 @@ export function useVerses(uid: string | null) {
           collectionIds: options?.collectionIds ?? [],
           active: options?.active ?? true,
           learningPhase: 'beginner',
+          starred: false,
           fsrsCard,
           createdAt: Date.now(),
         };
@@ -125,6 +128,17 @@ export function useVerses(uid: string | null) {
     [uid]
   );
 
+  const toggleVerseStarred = useCallback(
+    async (verseId: string) => {
+      if (!uid) return;
+      const verse = verses.find((v) => v.id === verseId);
+      if (!verse) return;
+      const docRef = doc(versesCollection(uid), verseId);
+      await setDoc(docRef, { starred: !verse.starred }, { merge: true });
+    },
+    [uid, verses]
+  );
+
   const updateVerseLearningPhase = useCallback(
     async (verseId: string, learningPhase: LearningPhase) => {
       if (!uid) return;
@@ -150,6 +164,7 @@ export function useVerses(uid: string | null) {
     updateVerseFsrs,
     updateVerseCollections,
     updateVerseActive,
+    toggleVerseStarred,
     updateVerseLearningPhase,
     removeVerse,
   };

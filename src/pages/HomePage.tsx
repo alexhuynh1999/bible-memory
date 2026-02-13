@@ -13,6 +13,7 @@ interface HomePageProps {
   collections: Collection[];
   onRemoveVerse: (id: string) => void;
   onUpdateVerseCollections: (verseId: string, collectionIds: string[]) => Promise<void>;
+  onToggleStarred: (verseId: string) => void;
   onAddCollection: (name: string, description?: string) => Promise<unknown>;
   onUpdateCollection: (collectionId: string, updates: Partial<Collection>) => Promise<void>;
   onRemoveCollection: (id: string) => void;
@@ -25,6 +26,7 @@ export default function HomePage({
   collections,
   onRemoveVerse,
   onUpdateVerseCollections,
+  onToggleStarred,
   onAddCollection,
   onUpdateCollection,
   onRemoveCollection,
@@ -105,6 +107,7 @@ export default function HomePage({
                   }}
                   onRemove={onRemoveVerse}
                   onUpdateCollections={onUpdateVerseCollections}
+                  onToggleStarred={onToggleStarred}
                 />
               </motion.div>
             ))}
@@ -303,6 +306,7 @@ export default function HomePage({
                   onClick={(id) => navigate(`/review?verseId=${id}`)}
                   onRemove={onRemoveVerse}
                   onUpdateCollections={onUpdateVerseCollections}
+                  onToggleStarred={onToggleStarred}
                 />
               </motion.div>
             ))}

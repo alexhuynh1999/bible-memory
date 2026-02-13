@@ -49,7 +49,7 @@ export default function ReviewPage({
   const activeVerses = useMemo(() => verses.filter((v) => v.active !== false), [verses]);
 
   // Setup state - step 1: scope, step 2: mode + input
-  const [scope, setScope] = useState<ReviewScope>('library');
+  const [scope, setScope] = useState<ReviewScope>('starred');
   const [selectedCollectionId, setSelectedCollectionId] = useState('');
   const [mode, setMode] = useState<ReviewMode>('srs');
 
@@ -106,6 +106,9 @@ export default function ReviewPage({
 
     // Step 1: determine pool from scope
     switch (scope) {
+      case 'starred':
+        pool = activeVerses.filter((v) => v.starred);
+        break;
       case 'library':
         pool = [...activeVerses];
         break;
@@ -205,6 +208,7 @@ export default function ReviewPage({
 
   // Counts for UI
   const dueCount = useMemo(() => activeVerses.filter((v) => isDue(v.fsrsCard)).length, [activeVerses]);
+  const starredCount = useMemo(() => activeVerses.filter((v) => v.starred).length, [activeVerses]);
 
   if (phase === 'complete') {
     return <ReviewComplete totalReviewed={currentIndex + 1} xpEarned={totalXp} />;
@@ -230,16 +234,22 @@ export default function ReviewPage({
           <div className="space-y-2">
             {[
               {
-                value: 'library' as const,
-                label: 'Entire Library',
-                desc: `${activeVerses.length} verses · ${dueCount} due`,
-                icon: '📚',
+                value: 'starred' as const,
+                label: 'Starred',
+                desc: `${starredCount} verse${starredCount !== 1 ? 's' : ''}`,
+                icon: '⭐',
               },
               {
                 value: 'collection' as const,
                 label: 'A Collection',
                 desc: `${collections.length} collection${collections.length !== 1 ? 's' : ''}`,
                 icon: '📁',
+              },
+              {
+                value: 'library' as const,
+                label: 'Entire Library',
+                desc: `${activeVerses.length} verses · ${dueCount} due`,
+                icon: '📚',
               },
             ].map((opt) => (
               <button
@@ -287,14 +297,28 @@ export default function ReviewPage({
         )}
 
         <button
-          onClick={() => setPhase('mode')}
+          onClick={() => {
+            if (scope === 'starred') {
+              // Starred scope: auto-random, skip mode selection
+              setMode('random');
+              const pool = activeVerses.filter((v) => v.starred);
+              const queue = shuffleArray(pool);
+              if (queue.length === 0) return;
+              setReviewQueue(queue);
+              setCurrentIndex(0);
+              setPhase('typing');
+            } else {
+              setPhase('mode');
+            }
+          }}
           disabled={
             activeVerses.length === 0 ||
-            (scope === 'collection' && !selectedCollectionId)
+            (scope === 'collection' && !selectedCollectionId) ||
+            (scope === 'starred' && starredCount === 0)
           }
           className="btn-primary w-full text-lg py-3 disabled:opacity-50 disabled:cursor-not-allowed"
         >
-          Next
+          {scope === 'starred' ? 'Start Review' : 'Next'}
         </button>
       </div>
     );
